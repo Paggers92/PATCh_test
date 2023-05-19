@@ -1,0 +1,16 @@
+Create public repository
+Create a new file, name it, then commit changes
+Change github.com to github.dev in the taskbar
+Extensions -> sf-stlite (not stlite) -> install
+Rename workshop-test to workshop-test.py to make it a python file
+
+Start coding:
+•	import streamlit as st
+•	as we are running streamlit in Pyodide, we need to use StreamLit version of functions like print – st.write(“”)
+•	press Ctrl-shift-P to open command pallet, search for stlite, launch stlite preview
+
+Deploy:
+•	Extension -> deploy and push
+•	Go to Github, repository, settings, pages, change branch to “main”
+•	Then on Pages, click Visit Site
+
