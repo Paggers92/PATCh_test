@@ -20,6 +20,9 @@ if uploaded_files:
     df = df.iloc[:, : 47]
     df = df.dropna(subset=['URN'])
 
+    # Filter out Sectors "Local Authority" and "Health Authority"
+    df = df[~df['Sector'].isin(['Local Authority', 'Health Authority'])]
+
     # Widgits to filter the dataframe
     regions = df['Region'].unique()
     with st.sidebar:
