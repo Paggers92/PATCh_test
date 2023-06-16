@@ -23,6 +23,14 @@ if uploaded_files:
     # Filter out Sectors "Local Authority" and "Health Authority"
     df = df[~df['Sector'].isin(['Local Authority', 'Health Authority'])]
 
+    # Where owner fields are blank, replace with setting fields
+    df['Owner ID'][df['Owner ID'].isna()] = df['URN']
+    df['Owner name'][df['Owner name'].isna()] = df['Setting name']
+
+    # Add column for number of settings per owner
+    df['Number of settings with this owner'] = df.groupby('Owner ID')['Owner ID'].transform('count')
+    #st.dataframe(df)
+
     # Widgits to filter the dataframe
     regions = df['Region'].unique()
     with st.sidebar:
@@ -32,8 +40,29 @@ if uploaded_files:
         )
     df = df[df['Region'] == region_option]
 
+    with st.sidebar:
+        upper_threshold = st.sidebar.number_input(
+            'Enter upper threshold for portfolio of settings per owner',
+            min_value = 1,
+            max_value = 100,
+            value = 5
+        )
+    df = df[df['Number of settings with this owner'] <= upper_threshold]
+    
+
+    # Select only certain columns in dataframe
+    df = df[['URN',
+             'Setting name',
+             'Owner name',
+             'Local authority',
+             'Number of registered places',
+             'Number of settings with this owner']]
 
     # Display dataframe
     st.dataframe(df)
+
+    # Create a plot
+    fig = px.histogram(df, x='Number of settings with this owner')
+    st.plotly_chart(fig)
 
     pass
