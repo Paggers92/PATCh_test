@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.express as px
 import matplotlib
 
+st.title('Ofsted Market Analysis')
+st.write('This is the Ofsted Market Analysis Tool...')
 
 # Takes "Ofsted Social care providers list for LAs"
 uploaded_files = st.file_uploader('Upload Ofsted social care providers list', accept_multiple_files=False)
