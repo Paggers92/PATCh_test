@@ -87,7 +87,7 @@ if uploaded_files:
     # Display dataframe
     st.dataframe(df)
 
-    # Group by number of settings per owener
+    # Group by number of settings per owner
     counts = df.groupby(['Number of settings with this owner', 'Region']).count().reset_index()
     #st.dataframe(counts)
 
