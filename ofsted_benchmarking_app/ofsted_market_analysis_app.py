@@ -33,8 +33,10 @@ st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img
 # Title and description
 st.title('Ofsted Benchmarking Analysis')
 st.write('(in development)')
-st.write('This tool analyses a list of social care settings providers as provided by Ofsted.')
-st.write('The user can filter on one or multiple regions.')
+st.write('This tool analyses the list of social care settings provided monthly by Ofsted.')
+st.write('You can add multiple .csv files to compare multiple months, and filter by geography and provider type using the sidebar on the left.')
+st.write('The table and charts below display the data in various ways, such as the number of settings, total registered places, inspection ratings, and which conditions are supported.')
+st.write('Use the tabs below to view different charts.')
 
 # Takes "Ofsted Social care providers list for LAs"
 uploaded_files = st.file_uploader('Upload Ofsted social care providers list:', accept_multiple_files=True)
