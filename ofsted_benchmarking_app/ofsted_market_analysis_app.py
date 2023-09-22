@@ -56,22 +56,30 @@ if uploaded_files:
         # Find month of dataset from file name
         if "april" in name.lower():
             month = "april"
-            month_num = 0.4
             # st.write(month)
         if "may" in name.lower():
             month = "may"
-            month_num = 0.5
         if "june" in name.lower():
             month = "june"
-            month_num = 0.6
         if "july" in name.lower():
             month = "july"
-            month_num = 0.7
         if "august" in name.lower():
             month = "august"
-            month_num = 0.8
+        if "september" in name.lower():
+            month = "september"
+        if "october" in name.lower():
+            month = "october"
+        if "november" in name.lower():
+            month = "november"
+        if "december" in name.lower():
+            month = "december"
+        if "january" in name.lower():
+            month = "january"
+        if "february" in name.lower():
+            month = "february"
+        if "march" in name.lower():
+            month = "march"
         file["month"] = month  # Populate new field with month name
-        file["month_order"] = float(year) + month_num  # Populate new field with month number
 
         # Find CH, Non-CH or all from file name
         if " non" in name.lower():
@@ -125,7 +133,6 @@ if uploaded_files:
     # Select only necessary columns
     df = df[['year',
              'month',
-             'month_order',
              'homestype',
              'Local authority',
              'Region_y',
@@ -268,7 +275,19 @@ if uploaded_files:
                    var_title = f'Number of settings in {geographic_area}<br>by sector<br>{provider_type_select}',
                    var_barmode = 'group')
 
-        # Group and plot average number of places per year by sector
+        # Group and plot total number of places per year by sector
+        total_places = df.groupby(['ofsted_date_order', 'Ofsted date', 'Sector']).sum('Number of registered places').reset_index()
+        total_places = total_places.rename(columns = {'Number of registered places':'Total registered places'})
+        #total_places = total_places.sort_values(['ofsted_date_order'])
+        #st.dataframe(total_places)
+        plot_chart(data_frame=total_places,
+                   var_x = 'Ofsted date',
+                   var_y = 'Total registered places',
+                   var_color = 'Sector',
+                   var_title = f'Total number of registered places in {geographic_area}<br>by sector<br>{provider_type_select}',
+                   var_barmode = 'group')
+
+        # Group and plot average number of places per year per setting by sector
         average_places = df.groupby(['ofsted_date_order', 'Ofsted date', 'Sector']).mean('Number of registered places').reset_index()
         average_places = average_places.rename(columns = {'Number of registered places':'Average registered places per provision'})
         #average_places = average_places.sort_values(['ofsted_date_order'])
