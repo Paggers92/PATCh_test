@@ -24,7 +24,7 @@ def plot_chart(data_frame, var_x, var_y, var_color, var_title, var_barmode, var_
     st.plotly_chart(fig)
 
 
-data1 = open_url('https://raw.githubusercontent.com/Paggers92/PATCh_test/main/ofsted_benchmarking_app/Local%20authorities%20and%20regions.csv')
+data1 = open_url('https://raw.githubusercontent.com/data-to-insight/patch/main/apps/007_ofsted_market_analysis/Local%20authorities%20and%20regions.csv')
 regions = pd.read_csv(data1)
 
 st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
