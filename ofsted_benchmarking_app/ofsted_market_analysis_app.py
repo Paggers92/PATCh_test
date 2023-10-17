@@ -28,6 +28,14 @@ def plot_chart(data_frame, var_x, var_y, var_color, var_title, var_barmode, var_
         category_orders=var_cat_orders)
     st.plotly_chart(fig)
 
+def line_chart(data_frame, var_x, var_y, var_color, var_title):
+    fig = px.line(data_frame,
+        x = var_x,
+        y = var_y,
+        color = var_color,
+        title = var_title)
+    st.plotly_chart(fig)
+
 data1 = open_url('https://raw.githubusercontent.com/data-to-insight/patch/main/apps/007_ofsted_market_analysis/Local%20authorities%20and%20regions.csv')
 regions = pd.read_csv(data1)
 
@@ -156,6 +164,9 @@ if uploaded_files:
 
     df = df.rename(columns = {'Region_y':'Region'})
 
+    # Select only settings with Registration Status = Active
+    df = df[df['Registration status'] == 'Active']
+
     # Convert Month-Year to datetime format
     df['Month-Year'] = df['month'] + '/' + df['year'].astype(str)
     df["ofsted_date_order"] = pd.to_datetime(df['Month-Year'])
@@ -180,13 +191,7 @@ if uploaded_files:
         df[field] = df.apply(lambda row: needs_coder(row, field), axis=1)
     #st.dataframe(df)
 
-    # Widgit to select geography level
-    with st.sidebar:
-        geography_level = st.sidebar.radio('Select geography level',
-             ('England', 'Region', 'Local authority')
-             )
-    
-    # Widgits to select geographic area
+    # Create lists of regions and local authorites
     england = 'England'
     regions = pd.DataFrame(df['Region'].unique())
     regions = regions.sort_values([0])
@@ -194,39 +199,102 @@ if uploaded_files:
     local_authorities = local_authorities.sort_values([0])
     #st.dataframe(local_authorities)
 
-    if geography_level == 'Local authority':
-        with st.sidebar:
-            la_option = st.sidebar.selectbox(
-                'Select local authority',
-                (local_authorities),
-                key = 1
+    # Create list of owners
+    #unique_owner_ids = df.groupby('Owner ID')
+    owner_list = pd.DataFrame(df['Owner name'].unique())
+    #owner_list = owner_list.str.lstrip()
+    owner_list = owner_list.sort_values([0])
+    #st.dataframe(owner_list)
+
+    # Widgit to toggle between geography and owner-level analysis
+    with st.sidebar:
+        toggle = st.sidebar.radio('Analyse by geographic area or owner name',
+            ('Geographic area', 'Owner name')
             )
-        df = df[df['Local authority'] == la_option]
-        geographic_area = la_option
-    elif geography_level == 'Region':
+
+    if toggle == 'Geographic area':
+        # Widgit to select geography level
         with st.sidebar:
-            region_option = st.sidebar.selectbox(
-                'Select region',
-                (regions),
-                key = 1
+            geography_level = st.sidebar.radio('Select geography level',
+                ('England', 'Region', 'Local authority')
+                )
+        
+        # Widgits to select geographic area
+        if geography_level == 'Local authority':
+            with st.sidebar:
+                la_option = st.sidebar.selectbox(
+                    'Select local authority',
+                    (local_authorities),
+                    key = 1
+                )
+            df = df[df['Local authority'] == la_option]
+            geographic_area = la_option
+        elif geography_level == 'Region':
+            with st.sidebar:
+                region_option = st.sidebar.selectbox(
+                    'Select region',
+                    (regions),
+                    key = 1
+                )
+            df = df[df['Region'] == region_option]
+            geographic_area = region_option
+        else:
+            df = df
+            geographic_area = 'England'
+
+        # Widgit to select provider type(s)
+        provider_types = pd.DataFrame(df['Provider type'].unique())
+        provider_types = provider_types.sort_values([0])
+        #st.dataframe(provider_types)
+        with st.sidebar:
+            provider_type_select = st.sidebar.multiselect( # something wrong here
+                'Select provider type',
+                (provider_types),
+                default = (["Children's Home"])
             )
-        df = df[df['Region'] == region_option]
-        geographic_area = region_option
+        df = df[df['Provider type'].isin(provider_type_select)]
+
+    elif toggle == 'Owner name':
+        # Widgit to select provider
+        with st.sidebar:
+            owner_selected = st.sidebar.selectbox(
+                'Select owner name',
+                (owner_list)
+            )
+        df = df[df['Owner name'] == owner_selected]
+        #geographic_area = ""
+
+    
     else:
         df = df
-        geographic_area = 'England'
 
-    # Widgit to select provider type(s)
-    provider_types = pd.DataFrame(df['Provider type'].unique())
-    provider_types = provider_types.sort_values([0])
-    #st.dataframe(provider_types)
     with st.sidebar:
-        provider_type_select = st.sidebar.multiselect( # something wrong here
-            'Select provider type',
-            (provider_types),
-            default = (["Children's Home"])
+        floor2 = st.sidebar.selectbox(
+            'Registered places - group boundary 1-2',
+            (2, 3, 4),
         )
-    df = df[df['Provider type'].isin(provider_type_select)]
+
+    with st.sidebar:
+        floor3 = st.sidebar.selectbox(
+            'Registered places - group boundary 2-3',
+            (5, 6, 7),
+        )
+
+    with st.sidebar:
+        floor4 = st.sidebar.selectbox(
+            'Registered places - group boundary 3-4',
+            (8, 9, 10),
+        )
+    
+    ceiling1 = floor2 - 1
+    ceiling2 = floor3 - 1
+    ceiling3 = floor4 - 1
+
+    # Add grouped column for number of registered places
+    df['Registered places group'] = df['Number of registered places'].transform(lambda x: '1 to ' + str(ceiling1) if x < floor2
+                                                                                else str(floor2) + ' to ' + str(ceiling2) if floor2 <= x < floor3
+                                                                                else str(floor3) + ' to ' + str(ceiling3) if floor3 <= x < floor4
+                                                                                else str(floor4) + '+')
     
     # Display dataframe, reset index and don't display index column
     df_display = df[['Ofsted date',
@@ -244,6 +312,7 @@ if uploaded_files:
              'CYP safety',
              'Leadership and management',
              'Number of registered places',
+             'Registered places group',
              'Emotional and behavioural difficulties',
              'Mental disorders',
              'Sensory impairment',
@@ -260,7 +329,16 @@ if uploaded_files:
                                             'Conditions Supported'])
 
     with tab1:
-        # Group and plot number of settings per year by sector
+        if toggle == 'Geographic area':
+            title_1 = f"Number of settings in {geographic_area} by sector<br>{', '.join(provider_type_select)}"
+            title_2 = f"Total number of registered places for provisions in {geographic_area} by sector<br>{', '.join(provider_type_select)}"
+            title_3 = f"Number of settings with grouped number of registered places in {geographic_area} by sector<br>{', '.join(provider_type_select)}"
+        else:
+            title_1 = f"Number of settings owned by {owner_selected}"
+            title_2 = f"Total number of registered places for provisions owned by {owner_selected}"
+            title_3 = f"Number of settings with grouped number of registered places owned by {owner_selected}"
+
+        # Group and plot number of settings by sector
         count_settings = df.groupby(['ofsted_date_order', 'Ofsted date', 'Sector']).count().reset_index()
         #count_settings['Ofsted date'].dtypes
         #count_settings = count_settings.sort_values(['ofsted_date_order'])
@@ -269,24 +347,41 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Sector',
-                   var_title = f"Number of settings in {geographic_area} by sector<br>{', '.join(provider_type_select)}",
+                   var_title = title_1,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"))
 
-        # Group and plot average number of places per year by sector
-        average_places = df.groupby(['ofsted_date_order', 'Ofsted date', 'Sector']).mean('Number of registered places').reset_index()
-        average_places = average_places.rename(columns = {'Number of registered places':'Average registered places per provision'})
-        #average_places = average_places.sort_values(['ofsted_date_order'])
-        #st.dataframe(average_places)
-        plot_chart(data_frame=average_places,
+        # Group and plot total number of places by sector
+        total_places = df.groupby(['ofsted_date_order', 'Ofsted date', 'Sector']).sum('Number of registered places').reset_index()
+        total_places = total_places.rename(columns = {'Number of registered places':'Total registered places'})
+        #total_places = total_places.sort_values(['ofsted_date_order'])
+        #st.dataframe(total_places)
+        plot_chart(data_frame=total_places,
                    var_x = 'Ofsted date',
-                   var_y = 'Average registered places per provision',
+                   var_y = 'Total registered places',
                    var_color = 'Sector',
-                   var_title = f"Average number of registered places for provisions in {geographic_area} by sector<br>{', '.join(provider_type_select)}",
+                   var_title = title_2,
                    var_barmode = 'group')
 
+        # Group and plot number of settings with grouped number of registered places
+        grouped_places = df.groupby(['ofsted_date_order', 'Ofsted date', 'Registered places group']).count().reset_index()
+        line_chart(data_frame=grouped_places,
+                   var_x = 'Ofsted date',
+                   var_y = 'URN',
+                   var_color = 'Registered places group',
+                   var_title = title_3)
+
     with tab2:
-        # Group and plot number of settings per year by Overall Effectiveness grade
+        if toggle == 'Geographic area':
+            title_3 = f"Number of settings in {geographic_area} by overall effectiveness grade<br>{', '.join(provider_type_select)}"
+            title_4 = f'Number of private sector settings in {geographic_area}<br>by overall effectiveness grade<br>{provider_type_select}'
+            title_5 = f'Number of local authority sector settings in {geographic_area}<br>by overall effectiveness grade<br>{provider_type_select}'
+        else:
+            title_3 = f"Number of settings owned by {owner_selected} by overall effectiveness grade"
+            title_4 = f'Number of private sector settings owned by {owner_selected}<br>by overall effectiveness grade'
+            title_5 = f'Number of local authority sector settings owned by {owner_selected}<br>by overall effectiveness grade'
+
+        # Group and plot number of settings by Overall Effectiveness grade
         count_settings = df.groupby(['ofsted_date_order', 'Ofsted date', 'Overall effectiveness']).count().reset_index()
         #count_settings = count_settings.sort_values(['ofsted_date_order'])
         #st.dataframe(count_settings)
@@ -294,7 +389,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Overall effectiveness',
-                   var_title = f'Number of settings in {geographic_area}<br>by overall effectiveness grade<br>{provider_type_select}',
+                   var_title = title_3,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -314,7 +409,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Overall effectiveness',
-                   var_title = f'Number of private sector settings in {geographic_area}<br>by overall effectiveness grade<br>{provider_type_select}',
+                   var_title = title_4,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -335,7 +430,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Overall effectiveness',
-                   var_title = f'Number of local authority sector settings in {geographic_area}<br>by overall effectiveness grade<br>{provider_type_select}',
+                   var_title = title_5,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -350,7 +445,16 @@ if uploaded_files:
         
 
     with tab3:
-        # Group and plot number of settings per year by CYP Safety grade
+        if toggle == 'Geographic area':
+            title_6 = f"Number of settings in {geographic_area} by CYP safety grade<br>{', '.join(provider_type_select)}"
+            title_7 = f'Number of private sector settings in {geographic_area}<br>by CYP safety grade<br>{provider_type_select}'
+            title_8 = f'Number of local authority sector settings in {geographic_area}<br>by CYP safety grade<br>{provider_type_select}'
+        else:
+            title_6 = f"Number of settings owned by {owner_selected} by CYP safety"
+            title_7 = f'Number of private sector settings owned by {owner_selected}<br>by CYP safety grade'
+            title_8 = f'Number of local authority sector settings owned by {owner_selected}<br>by CYP safety grade'
+
+        # Group and plot number of settings by CYP Safety grade
         count_settings = df.groupby(['ofsted_date_order', 'Ofsted date', 'CYP safety']).count().reset_index()
         count_settings = count_settings.sort_values(['CYP safety'])
         #count_settings = count_settings.sort_values(['ofsted_date_order'])
@@ -359,7 +463,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'CYP safety',
-                   var_title = f'Number of settings in {geographic_area}<br>by CYP safety grade<br>{provider_type_select}',
+                   var_title = title_6,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -380,7 +484,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'CYP safety',
-                   var_title = f'Number of private sector settings in {geographic_area}<br>by CYP safety grade<br>{provider_type_select}',
+                   var_title = title_7,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -401,7 +505,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'CYP safety',
-                   var_title = f'Number of local authority sector settings in {geographic_area}<br>by CYP safety grade<br>{provider_type_select}',
+                   var_title = title_8,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -415,7 +519,16 @@ if uploaded_files:
 
 
     with tab4:
-        # Group and plot number of settings per year by Leadership & Management grade
+        if toggle == 'Geographic area':
+            title_9 = f"Number of settings in {geographic_area} by Leadership & Management grade<br>{', '.join(provider_type_select)}"
+            title_10 = f'Number of private sector settings in {geographic_area}<br>by Leadership & Management grade<br>{provider_type_select}'
+            title_11 = f'Number of local authority sector settings in {geographic_area}<br>by Leadership & Management<br>{provider_type_select}'
+        else:
+            title_9 = f"Number of settings owned by {owner_selected} by CYP safety"
+            title_10 = f'Number of private sector settings owned by {owner_selected}<br>by Leadership & Management'
+            title_11 = f'Number of local authority sector settings owned by {owner_selected}<br>by Leadership & Management'
+
+        # Group and plot number of settings by Leadership & Management grade
         count_settings = df.groupby(['ofsted_date_order', 'Ofsted date', 'Leadership and management']).count().reset_index()
         count_settings = count_settings.sort_values(['Leadership and management'])
         #count_settings = count_settings.sort_values(['ofsted_date_order'])
@@ -424,7 +537,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Leadership and management',
-                   var_title = f'Number of settings in {geographic_area}<br>by Leadership & Management grade<br>{provider_type_select}',
+                   var_title = title_9,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -445,7 +558,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Leadership and management',
-                   var_title = f'Number of private sector settings in {geographic_area}<br>by Leadership & Management grade<br>{provider_type_select}',
+                   var_title = title_10,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -466,7 +579,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Leadership and management',
-                   var_title = f'Number of local authority sector settings in {geographic_area}<br>by Leadership & Management grade<br>{provider_type_select}',
+                   var_title = title_11,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"),
                    var_cdm = {
@@ -480,6 +593,12 @@ if uploaded_files:
 
 
     with tab5:
+        if toggle == 'Geographic area':
+            title_12 = f"Number of settings in {geographic_area}<br>providing care for categories of need<br>{', '.join(provider_type_select)}"
+
+        else:
+            title_12 = f"Number of settings owned by {owner_selected}<br>providing care for categories of need"
+
         # Group and plot number of settings per year that support each category of need
         count_needs = pd.DataFrame()
 
@@ -500,7 +619,7 @@ if uploaded_files:
                    var_x = 'Ofsted date',
                    var_y = 'URN',
                    var_color = 'Category_of_need',
-                   var_title = f'Number of settings in {geographic_area}<br>providing care for categories of need<br>{provider_type_select}',
+                   var_title = title_12,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"))
 
