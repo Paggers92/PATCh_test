@@ -1,4 +1,5 @@
 import streamlit as st
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import matplotlib
@@ -199,12 +200,24 @@ if uploaded_files:
     local_authorities = local_authorities.sort_values([0])
     #st.dataframe(local_authorities)
 
+    # Create list of Ofsted dates
+    ofsted_dates = pd.DataFrame(df['Ofsted date'].unique())
+
     # Create list of owners
     #unique_owner_ids = df.groupby('Owner ID')
     owner_list = pd.DataFrame(df['Owner name'].unique())
+    owner_list.columns = ['Owner name']
     #owner_list = owner_list.str.lstrip()
-    owner_list = owner_list.sort_values([0])
+    owner_list = owner_list.sort_values(['Owner name'])
     #st.dataframe(owner_list)
+
+    # Create list of owners where they appear in each dataset
+    owner_appearances = df[['Owner name', 'Ofsted date']]
+    owner_appearances = owner_appearances.drop_duplicates()
+    owner_appearances['Count'] = 1
+    st.dataframe(owner_appearances)
+    owner_appearances = owner_appearances.pivot(index='Owner name', columns='Ofsted date', values='Count')
+    owner_appearances['First year appearing'] = '' #### ADD LAMBDA FUNCTION FOR CONDITIONAL COLUMN - AN IF ELSE FOR EACH OFSTED-DATE
 
     # Widgit to toggle between geography and owner-level analysis
     with st.sidebar:
@@ -271,19 +284,22 @@ if uploaded_files:
     with st.sidebar:
         floor2 = st.sidebar.selectbox(
             'Registered places - group boundary 1-2',
-            (2, 3, 4),
+            (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+            index=0
         )
 
     with st.sidebar:
         floor3 = st.sidebar.selectbox(
             'Registered places - group boundary 2-3',
-            (5, 6, 7),
+            (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+            index=3
         )
 
     with st.sidebar:
         floor4 = st.sidebar.selectbox(
             'Registered places - group boundary 3-4',
-            (8, 9, 10),
+            (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+            index=8
         )
     
     ceiling1 = floor2 - 1
@@ -322,11 +338,12 @@ if uploaded_files:
              'Physical disabilities']].reset_index()
     st.dataframe(df_display.iloc[:,1:])
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(['Setting & Beds',
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(['Setting & Beds',
                                             'Overall Effectiveness', 
                                             'CYP Safety', 
                                             'Leadership & Management',
-                                            'Conditions Supported'])
+                                            'Conditions Supported',
+                                            'List of owners'])
 
     with tab1:
         if toggle == 'Geographic area':
@@ -622,5 +639,8 @@ if uploaded_files:
                    var_title = title_12,
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"))
+
+    with tab6:
+        st.dataframe(owner_appearances)
 
     pass
