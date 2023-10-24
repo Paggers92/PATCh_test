@@ -134,6 +134,10 @@ if uploaded_files:
     # Append all datasets together to check which columns line up
     df = pd.concat(list(files_dict.values()), axis=0).reset_index()
 
+    # Cleaning data
+    cols = ['Setting name', 'Owner name']
+    df[cols] = df[cols].apply(lambda x: x.str.strip())#.str.title())
+
     # Match local authority to region
     df = df.merge(regions,how='left',on='Local authority')
 
@@ -200,24 +204,27 @@ if uploaded_files:
     local_authorities = local_authorities.sort_values([0])
     #st.dataframe(local_authorities)
 
-    # Create list of Ofsted dates
-    ofsted_dates = pd.DataFrame(df['Ofsted date'].unique())
+    # Create dataframe of owners ordered by owner name, then Ofsted date (earliest first), and remove duplicates, keeping first
+    owners1 = df[['Owner name','Ofsted date']].copy()
+    owners1.sort_values(['Owner name','Ofsted date'], inplace=True)
+    owners1.drop_duplicates('Owner name', keep='first', inplace=True)
+    owners1.rename(columns = {'Ofsted date':'First appearance in data'}, inplace=True)
 
-    # Create list of owners
-    #unique_owner_ids = df.groupby('Owner ID')
-    owner_list = pd.DataFrame(df['Owner name'].unique())
-    owner_list.columns = ['Owner name']
-    #owner_list = owner_list.str.lstrip()
-    owner_list = owner_list.sort_values(['Owner name'])
-    #st.dataframe(owner_list)
+    # Create dataframe of owners ordered by owner name, then Ofsted date (latest first), and remove duplicates, keeping first
+    owners2 = df[['Owner name','Ofsted date']].copy()
+    owners2.sort_values(['Owner name','Ofsted date'], ascending=False, inplace=True)
+    owners2.drop_duplicates('Owner name', keep='first', inplace=True)
+    owners2.rename(columns = {'Ofsted date':'Last appearance in data'}, inplace=True)
 
-    # Create list of owners where they appear in each dataset
-    owner_appearances = df[['Owner name', 'Ofsted date']]
-    owner_appearances = owner_appearances.drop_duplicates()
-    owner_appearances['Count'] = 1
-    st.dataframe(owner_appearances)
-    owner_appearances = owner_appearances.pivot(index='Owner name', columns='Ofsted date', values='Count')
-    owner_appearances['First year appearing'] = '' #### ADD LAMBDA FUNCTION FOR CONDITIONAL COLUMN - AN IF ELSE FOR EACH OFSTED-DATE
+    # Merge owners dataframes
+    owners = pd.merge(owners1, owners2, how='inner', on='Owner name')
+
+    # # Create dataframe of owners showing which months they appear in ####### Use this for the chart!!!
+    # owner_appearances = df[['Owner name', 'Ofsted date']]
+    # owner_appearances = owner_appearances.drop_duplicates()
+    # owner_appearances['Count'] = 1
+    # #st.dataframe(owner_appearances)
+    # owner_appearances = owner_appearances.pivot(index='Owner name', columns='Ofsted date', values='Count')
 
     # Widgit to toggle between geography and owner-level analysis
     with st.sidebar:
@@ -283,22 +290,22 @@ if uploaded_files:
 
     with st.sidebar:
         floor2 = st.sidebar.selectbox(
-            'Registered places - group boundary 1-2',
-            (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+            'Registered places - boundary A',
+            range(2, 12),
             index=0
         )
 
     with st.sidebar:
         floor3 = st.sidebar.selectbox(
-            'Registered places - group boundary 2-3',
-            (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+            'Registered places - boundary B',
+            range(2, 12),
             index=3
         )
 
     with st.sidebar:
         floor4 = st.sidebar.selectbox(
-            'Registered places - group boundary 3-4',
-            (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
+            'Registered places - boundary C',
+            range(2, 12),
             index=8
         )
     
@@ -641,6 +648,6 @@ if uploaded_files:
                    var_labels = dict(URN = "Number of settings"))
 
     with tab6:
-        st.dataframe(owner_appearances)
+        st.dataframe(owners)
 
     pass
