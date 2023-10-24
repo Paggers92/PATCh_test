@@ -216,15 +216,17 @@ if uploaded_files:
     owners2.drop_duplicates('Owner name', keep='first', inplace=True)
     owners2.rename(columns = {'Ofsted date':'Last appearance in data'}, inplace=True)
 
+    # Create dataframe of owners showing in which months they appear
+    owner_appearances = df[['Owner name', 'Ofsted date']]
+    owner_appearances = owner_appearances.drop_duplicates()
+    owner_appearances['Count'] = 1
+    owner_appearances = owner_appearances.pivot(index='Owner name', columns='Ofsted date', values='Count')
+    #owner_appearances['Owner name'] = owner_appearances.index
+    owner_appearances = owner_appearances.rename_axis('Owner name').reset_index()
+
     # Merge owners dataframes
     owners = pd.merge(owners1, owners2, how='inner', on='Owner name')
-
-    # # Create dataframe of owners showing which months they appear in ####### Use this for the chart!!!
-    # owner_appearances = df[['Owner name', 'Ofsted date']]
-    # owner_appearances = owner_appearances.drop_duplicates()
-    # owner_appearances['Count'] = 1
-    # #st.dataframe(owner_appearances)
-    # owner_appearances = owner_appearances.pivot(index='Owner name', columns='Ofsted date', values='Count')
+    owners = pd.merge(owners, owner_appearances, how='inner', on='Owner name')
 
     # Widgit to toggle between geography and owner-level analysis
     with st.sidebar:
