@@ -1,4 +1,5 @@
 import streamlit as st
+import math
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -8,6 +9,20 @@ from pyodide.http import open_url
 # Buttons for each page linking to code
 st.markdown("[![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/contribute.png?raw=true)](https://www.datatoinsight.org/patch) \
              [![Foo](https://github.com/data-to-insight/patch/blob/main/docs/img/viewthecodeimage.png?raw=true)](https://github.com/data-to-insight/patch/blob/main/apps/007_ofsted_market_analysis/app.py)")
+
+def owner_movements(df, col_1, col_2):
+    existing_df = df[((df[col_1] == 'Existing') |(df[col_1] == 'New')) & (df[col_2] == 1)]
+    existing_df[col_2] = 'Existing'
+    left_df =  df[(df[col_1] == 'Existing') & (df[col_2] == 0)]
+    left_df[col_2] = 'Left'
+    new_df = df[(df[col_1] == 'None') & (df[col_2] == 1)]
+    new_df[col_2] = 'New'
+    temp_df = pd.concat([existing_df, left_df, new_df]).sort_index()
+    index_list = temp_df['index'].tolist()
+    none_df = df[~df['index'].isin(index_list)]
+    none_df[col_2] = 'None'
+    df = pd.concat([temp_df, none_df]).sort_index()
+    return df[col_2]
 
 def needs_coder(row, field):
     if row[field] == 'Y':
@@ -177,6 +192,9 @@ if uploaded_files:
     df["ofsted_date_order"] = pd.to_datetime(df['Month-Year'])
     df['Ofsted date'] = df['ofsted_date_order'].apply(lambda x: x.strftime('%B-%Y'))
 
+    # Order dataframe by month then by setting name
+    df.sort_values(['ofsted_date_order', 'Setting name'], inplace=True)
+
     # Replace values
     df['Overall effectiveness'] = df['Overall effectiveness'].replace('Requires Improvement', 'Requires improvement to be good')
     df['CYP safety'] = df['CYP safety'].replace('Requires Improvement', 'Requires improvement to be good')
@@ -204,6 +222,10 @@ if uploaded_files:
     local_authorities = local_authorities.sort_values([0])
     #st.dataframe(local_authorities)
 
+    # Create list of months
+    months_list = df['Ofsted date'].unique()
+    st.dataframe(months_list)
+
     # Create dataframe of owners ordered by owner name, then Ofsted date (earliest first), and remove duplicates, keeping first
     owners1 = df[['Owner name','Ofsted date']].copy()
     owners1.sort_values(['Owner name','Ofsted date'], inplace=True)
@@ -219,10 +241,22 @@ if uploaded_files:
     # Create dataframe of owners showing in which months they appear
     owner_appearances = df[['Owner name', 'Ofsted date']]
     owner_appearances = owner_appearances.drop_duplicates()
+    owner_appearances.sort_values(['Owner name','Ofsted date'], inplace=True)
     owner_appearances['Count'] = 1
     owner_appearances = owner_appearances.pivot(index='Owner name', columns='Ofsted date', values='Count')
-    #owner_appearances['Owner name'] = owner_appearances.index
     owner_appearances = owner_appearances.rename_axis('Owner name').reset_index()
+    owner_appearances.fillna(0, inplace=True)
+    owner_appearances.reset_index(inplace=True)
+    st.dataframe(owner_appearances)
+
+    # Use function "owner_movements" to identify where owners exist, where they are new to the market and where they leave the market
+    owner_appearances.iloc[:,2] = owner_appearances.iloc[:,2].apply(lambda row: 'Existing' if row == 1 else 'None')
+    for i in range(len(months_list)):
+        if i > 0:
+            owner_appearances[months_list[i]] = owner_movements(owner_appearances, months_list[i-1], months_list[i])
+
+    owner_appearances = owner_appearances.drop(['index'], axis=1)
+    #st.dataframe(owner_appearances)
 
     # Merge owners dataframes
     owners = pd.merge(owners1, owners2, how='inner', on='Owner name')
@@ -320,7 +354,7 @@ if uploaded_files:
                                                                                 else str(floor2) + ' to ' + str(ceiling2) if floor2 <= x < floor3
                                                                                 else str(floor3) + ' to ' + str(ceiling3) if floor3 <= x < floor4
                                                                                 else str(floor4) + '+')
-    
+
     # Display dataframe, reset index and don't display index column
     df_display = df[['Ofsted date',
              'Local authority',
@@ -651,5 +685,19 @@ if uploaded_files:
 
     with tab6:
         st.dataframe(owners)
+
+        count_owners = df.groupby([months_list]).count().reset_index()
+        #count_owners = count_owners.sort_values(['Leadership and management'])
+        
+        # fig = px.bar(owners,
+        #     x = var_x,
+        #     y = var_y,
+        #     color = var_color,
+        #     title = var_title,
+        #     barmode=var_barmode,
+        #     labels=var_labels,
+        #     color_discrete_map=var_cdm,
+        #     category_orders=var_cat_orders)
+        # st.plotly_chart(fig)
 
     pass
