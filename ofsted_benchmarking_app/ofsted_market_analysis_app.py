@@ -224,7 +224,7 @@ if uploaded_files:
 
     # Create list of months
     months_list = df['Ofsted date'].unique()
-    st.dataframe(months_list)
+    #st.dataframe(months_list)
 
     # Create dataframe of owners ordered by owner name, then Ofsted date (earliest first), and remove duplicates, keeping first
     owners1 = df[['Owner name','Ofsted date']].copy()
@@ -247,7 +247,7 @@ if uploaded_files:
     owner_appearances = owner_appearances.rename_axis('Owner name').reset_index()
     owner_appearances.fillna(0, inplace=True)
     owner_appearances.reset_index(inplace=True)
-    st.dataframe(owner_appearances)
+    #st.dataframe(owner_appearances)
 
     # Use function "owner_movements" to identify where owners exist, where they are new to the market and where they leave the market
     owner_appearances.iloc[:,2] = owner_appearances.iloc[:,2].apply(lambda row: 'Existing' if row == 1 else 'None')
@@ -386,7 +386,7 @@ if uploaded_files:
                                             'CYP Safety', 
                                             'Leadership & Management',
                                             'Conditions Supported',
-                                            'List of owners'])
+                                            'Owners'])
 
     with tab1:
         if toggle == 'Geographic area':
@@ -683,21 +683,66 @@ if uploaded_files:
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"))
 
-    with tab6:
+    with tab6:   
         st.dataframe(owners)
 
-        count_owners = df.groupby([months_list]).count().reset_index()
-        #count_owners = count_owners.sort_values(['Leadership and management'])
+        # Find counts of owners in each month by market leaving/joining status
+        count_owners_data = {'Month': [],
+                             'Existing': [],
+                             'None': [],
+                             'New': [],
+                             'Left': []}
+        count_owners = pd.DataFrame(count_owners_data)
+        #st.dataframe(count_owners)
+
+        for i in range(len(months_list)):
+            month = months_list[i]
+            existing = len(owners[owners[month] == 'Existing'])
+            none = len(owners[owners[month]== 'None'])
+            new = len(owners[owners[month] == 'New'])
+            left = len(owners[owners[month] == 'Left'])
+            new_record = pd.DataFrame([{'Month':month, 'Existing':existing, 'None':none, 'New':new, 'Left':left}])
+            #st.dataframe(new_record)
+            count_owners = pd.concat([count_owners, new_record], ignore_index=True)
         
-        # fig = px.bar(owners,
-        #     x = var_x,
-        #     y = var_y,
-        #     color = var_color,
-        #     title = var_title,
-        #     barmode=var_barmode,
-        #     labels=var_labels,
-        #     color_discrete_map=var_cdm,
-        #     category_orders=var_cat_orders)
-        # st.plotly_chart(fig)
+        count_owners = count_owners.drop(['None'], axis=1)
+        st.dataframe(count_owners)
+
+        # Reformat counts into 'long' format and group for chart display
+        
+        count_owners_long = pd.melt(count_owners, id_vars=['Month'], value_vars=['Existing', 'New', 'Left'])
+        owner_group_dict = {'Existing': 'group1', 
+                    'New': 'group1', 
+                    'Left': 'group2'
+                    }
+        count_owners_long['Group'] = count_owners_long['variable'].map(owner_group_dict)
+        st.dataframe(count_owners_long)
+        
+        fig = px.bar(count_owners_long,
+                    x='Group',
+                    y='value',
+                    facet_col='Month',
+                    color='variable',
+                    color_discrete_map={
+                        'Existing' : 'light blue',
+                        'New' : 'green',
+                        'Left' : 'red'},
+                    )
+        fig.update_xaxes(visible=False)
+
+        # fig = px.bar(count_owners,
+        #             x = 'Month',
+        #             y = ['Existing', 'New', 'Left'],
+        #             title = 'Number of owners in Ofsted data',
+        #             barmode='group',
+        #             #labels=var_labels,
+        #             color_discrete_map={
+        #                 'Existing' : 'light blue',
+        #                 'New' : 'green',
+        #                 'Left' : 'red'},
+        #             )
+        
+        st.plotly_chart(fig)
+
 
     pass
