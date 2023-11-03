@@ -716,31 +716,20 @@ if uploaded_files:
                     'Left': 'group2'
                     }
         count_owners_long['Group'] = count_owners_long['variable'].map(owner_group_dict)
+        count_owners_long = count_owners_long.rename(columns = {'variable':'Market status', 'value':'Number of owners'})
         st.dataframe(count_owners_long)
         
         fig = px.bar(count_owners_long,
                     x='Group',
-                    y='value',
+                    y='Number of owners',
                     facet_col='Month',
-                    color='variable',
+                    color='Market status',
                     color_discrete_map={
-                        'Existing' : 'light blue',
-                        'New' : 'green',
-                        'Left' : 'red'},
+                        'Existing' : '#1f77b4',
+                        'New' : '#2ca02c',
+                        'Left' : '#d62728'},
                     )
         fig.update_xaxes(visible=False)
-
-        # fig = px.bar(count_owners,
-        #             x = 'Month',
-        #             y = ['Existing', 'New', 'Left'],
-        #             title = 'Number of owners in Ofsted data',
-        #             barmode='group',
-        #             #labels=var_labels,
-        #             color_discrete_map={
-        #                 'Existing' : 'light blue',
-        #                 'New' : 'green',
-        #                 'Left' : 'red'},
-        #             )
         
         st.plotly_chart(fig)
 
