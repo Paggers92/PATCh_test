@@ -320,40 +320,8 @@ if uploaded_files:
         df = df[df['Owner name'] == owner_selected]
         #geographic_area = ""
 
-    
     else:
         df = df
-
-    with st.sidebar:
-        floor2 = st.sidebar.selectbox(
-            'Registered places - boundary A',
-            range(2, 12),
-            index=0
-        )
-
-    with st.sidebar:
-        floor3 = st.sidebar.selectbox(
-            'Registered places - boundary B',
-            range(2, 12),
-            index=3
-        )
-
-    with st.sidebar:
-        floor4 = st.sidebar.selectbox(
-            'Registered places - boundary C',
-            range(2, 12),
-            index=8
-        )
-    
-    ceiling1 = floor2 - 1
-    ceiling2 = floor3 - 1
-    ceiling3 = floor4 - 1
-
-    # Add grouped column for number of registered places
-    df['Registered places group'] = df['Number of registered places'].transform(lambda x: '1 to ' + str(ceiling1) if x < floor2
-                                                                                else str(floor2) + ' to ' + str(ceiling2) if floor2 <= x < floor3
-                                                                                else str(floor3) + ' to ' + str(ceiling3) if floor3 <= x < floor4
-                                                                                else str(floor4) + '+')
 
     # Display dataframe, reset index and don't display index column
     df_display = df[['Ofsted date',
@@ -371,7 +339,7 @@ if uploaded_files:
              'CYP safety',
              'Leadership and management',
              'Number of registered places',
-             'Registered places group',
+             #'Registered places group',
              'Emotional and behavioural difficulties',
              'Mental disorders',
              'Sensory impairment',
@@ -422,6 +390,37 @@ if uploaded_files:
                    var_color = 'Sector',
                    var_title = title_2,
                    var_barmode = 'group')
+
+        # User selects boundaries for groups of registered places
+        st.markdown('The chart below shows the number of settings grouped by the of registered places in the setting. You can alter the size of each group by toggling the numbers in these three boxes:')
+
+        floor2 = tab1.selectbox(
+            'Boundary between groups 1 and 2 (number of registered places per setting)',
+            range(2, 12),
+            index=0
+        )
+
+        floor3 = tab1.selectbox(
+            'Boundary between groups 2 and 3 (number of registered places per setting)',
+            range(2, 12),
+            index=3
+        )
+
+        floor4 = tab1.selectbox(
+            'Boundary between groups 3 and 4 (number of registered places per setting)',
+            range(2, 12),
+            index=8
+        )
+        
+        ceiling1 = floor2 - 1
+        ceiling2 = floor3 - 1
+        ceiling3 = floor4 - 1
+
+        # Add grouped column for number of registered places
+        df['Registered places group'] = df['Number of registered places'].transform(lambda x: '1 to ' + str(ceiling1) if x < floor2
+                                                                                    else str(floor2) + ' to ' + str(ceiling2) if floor2 <= x < floor3
+                                                                                    else str(floor3) + ' to ' + str(ceiling3) if floor3 <= x < floor4
+                                                                                    else str(floor4) + '+')
 
         # Group and plot number of settings with grouped number of registered places
         grouped_places = df.groupby(['ofsted_date_order', 'Ofsted date', 'Registered places group']).count().reset_index()
