@@ -226,6 +226,9 @@ if uploaded_files:
     months_list = df['Ofsted date'].unique()
     #st.dataframe(months_list)
 
+    # Add column for number of settings per owner
+    df['Total number of settings with this owner'] = df.groupby('Owner name')['Setting name'].transform('count')
+
     # Create dataframe of owners ordered by owner name, then Ofsted date (earliest first), and remove duplicates, keeping first
     owners1 = df[['Owner name','Ofsted date']].copy()
     owners1.sort_values(['Owner name','Ofsted date'], inplace=True)
@@ -258,9 +261,15 @@ if uploaded_files:
     owner_appearances = owner_appearances.drop(['index'], axis=1)
     #st.dataframe(owner_appearances)
 
+    # Create dataframe of owners and their number of settings
+    owner_size = df[['Owner name', 'Total number of settings with this owner']]
+    owner_size = owner_size.drop_duplicates()
+    #st.dataframe(owner_size)
+
     # Merge owners dataframes
     owners = pd.merge(owners1, owners2, how='inner', on='Owner name')
     owners = pd.merge(owners, owner_appearances, how='inner', on='Owner name')
+    owners = pd.merge(owners, owner_size, how='left', on='Owner name')
 
     # Widgit to toggle between geography and owner-level analysis
     with st.sidebar:
@@ -335,11 +344,11 @@ if uploaded_files:
              'Registration status',
              'Owner ID',
              'Owner name',
+             'Total number of settings with this owner',
              'Overall effectiveness',
              'CYP safety',
              'Leadership and management',
              'Number of registered places',
-             #'Registered places group',
              'Emotional and behavioural difficulties',
              'Mental disorders',
              'Sensory impairment',
@@ -682,7 +691,22 @@ if uploaded_files:
                    var_barmode = 'group',
                    var_labels = dict(URN = "Number of settings"))
 
-    with tab6:   
+    with tab6:
+        # settings_range = tab6.slider(
+        #     'Enter range of values for settings per owner',
+        #     min_value = 1,
+        #     max_value = 1000,
+        #     value = (1,50)
+        # )
+
+        # # Filter dataframe according to selection
+        # #st.write('Range:', settings_range)
+        # lower_bound = int(settings_range[0])
+        # upper_bound = int(settings_range[1])
+        # #st.write('Lower bound:', lower_bound)
+        # #st.write('Upper bound:', upper_bound)
+        # owners = owners[owners['Total number of settings with this owner'].between(lower_bound, upper_bound)]
+
         st.dataframe(owners)
 
         # Find counts of owners in each month by market leaving/joining status
@@ -705,7 +729,7 @@ if uploaded_files:
             count_owners = pd.concat([count_owners, new_record], ignore_index=True)
         
         count_owners = count_owners.drop(['None'], axis=1)
-        st.dataframe(count_owners)
+        #st.dataframe(count_owners)
 
         # Reformat counts into 'long' format and group for chart display
         
@@ -716,7 +740,7 @@ if uploaded_files:
                     }
         count_owners_long['Group'] = count_owners_long['variable'].map(owner_group_dict)
         count_owners_long = count_owners_long.rename(columns = {'variable':'Market status', 'value':'Number of owners'})
-        st.dataframe(count_owners_long)
+        #st.dataframe(count_owners_long)
         
         fig = px.bar(count_owners_long,
                     x='Group',
