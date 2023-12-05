@@ -229,6 +229,10 @@ if uploaded_files:
     # Add column for number of settings per owner
     df['Total number of settings with this owner'] = df.groupby('Owner name')['Setting name'].transform('count')
 
+    # Create list of owners to widget
+    owner_list = pd.DataFrame(df['Owner name'].unique())
+    owner_list = owner_list.sort_values([0])
+
     # Create dataframe of owners ordered by owner name, then Ofsted date (earliest first), and remove duplicates, keeping first
     owners1 = df[['Owner name','Ofsted date']].copy()
     owners1.sort_values(['Owner name','Ofsted date'], inplace=True)
