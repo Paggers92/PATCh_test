@@ -233,48 +233,6 @@ if uploaded_files:
     owner_list = pd.DataFrame(df['Owner name'].unique())
     owner_list = owner_list.sort_values([0])
 
-    # Create dataframe of owners ordered by owner name, then Ofsted date (earliest first), and remove duplicates, keeping first
-    owners1 = df[['Owner name','Ofsted date']].copy()
-    owners1.sort_values(['Owner name','Ofsted date'], inplace=True)
-    owners1.drop_duplicates('Owner name', keep='first', inplace=True)
-    owners1.rename(columns = {'Ofsted date':'First appearance in data'}, inplace=True)
-
-    # Create dataframe of owners ordered by owner name, then Ofsted date (latest first), and remove duplicates, keeping first
-    owners2 = df[['Owner name','Ofsted date']].copy()
-    owners2.sort_values(['Owner name','Ofsted date'], ascending=False, inplace=True)
-    owners2.drop_duplicates('Owner name', keep='first', inplace=True)
-    owners2.rename(columns = {'Ofsted date':'Last appearance in data'}, inplace=True)
-
-    # Create dataframe of owners showing in which months they appear
-    owner_appearances = df[['Owner name', 'Ofsted date']]
-    owner_appearances = owner_appearances.drop_duplicates()
-    owner_appearances.sort_values(['Owner name','Ofsted date'], inplace=True)
-    owner_appearances['Count'] = 1
-    owner_appearances = owner_appearances.pivot(index='Owner name', columns='Ofsted date', values='Count')
-    owner_appearances = owner_appearances.rename_axis('Owner name').reset_index()
-    owner_appearances.fillna(0, inplace=True)
-    owner_appearances.reset_index(inplace=True)
-    #st.dataframe(owner_appearances)
-
-    # Use function "owner_movements" to identify where owners exist, where they are new to the market and where they leave the market
-    owner_appearances.iloc[:,2] = owner_appearances.iloc[:,2].apply(lambda row: 'Existing' if row == 1 else 'None')
-    for i in range(len(months_list)):
-        if i > 0:
-            owner_appearances[months_list[i]] = owner_movements(owner_appearances, months_list[i-1], months_list[i])
-
-    owner_appearances = owner_appearances.drop(['index'], axis=1)
-    #st.dataframe(owner_appearances)
-
-    # Create dataframe of owners and their number of settings
-    owner_size = df[['Owner name', 'Total number of settings with this owner']]
-    owner_size = owner_size.drop_duplicates()
-    #st.dataframe(owner_size)
-
-    # Merge owners dataframes
-    owners = pd.merge(owners1, owners2, how='inner', on='Owner name')
-    owners = pd.merge(owners, owner_appearances, how='inner', on='Owner name')
-    owners = pd.merge(owners, owner_size, how='left', on='Owner name')
-
     # Widgit to toggle between geography and owner-level analysis
     with st.sidebar:
         toggle = st.sidebar.radio('Analyse by geographic area or owner name',
@@ -335,6 +293,48 @@ if uploaded_files:
 
     else:
         df = df
+
+    # Create dataframe of owners ordered by owner name, then Ofsted date (earliest first), and remove duplicates, keeping first
+    owners1 = df[['Owner name','Ofsted date']].copy()
+    owners1.sort_values(['Owner name','Ofsted date'], inplace=True)
+    owners1.drop_duplicates('Owner name', keep='first', inplace=True)
+    owners1.rename(columns = {'Ofsted date':'First appearance in data'}, inplace=True)
+
+    # Create dataframe of owners ordered by owner name, then Ofsted date (latest first), and remove duplicates, keeping first
+    owners2 = df[['Owner name','Ofsted date']].copy()
+    owners2.sort_values(['Owner name','Ofsted date'], ascending=False, inplace=True)
+    owners2.drop_duplicates('Owner name', keep='first', inplace=True)
+    owners2.rename(columns = {'Ofsted date':'Last appearance in data'}, inplace=True)
+
+    # Create dataframe of owners showing in which months they appear
+    owner_appearances = df[['Owner name', 'Ofsted date']]
+    owner_appearances = owner_appearances.drop_duplicates()
+    owner_appearances.sort_values(['Owner name','Ofsted date'], inplace=True)
+    owner_appearances['Count'] = 1
+    owner_appearances = owner_appearances.pivot(index='Owner name', columns='Ofsted date', values='Count')
+    owner_appearances = owner_appearances.rename_axis('Owner name').reset_index()
+    owner_appearances.fillna(0, inplace=True)
+    owner_appearances.reset_index(inplace=True)
+    #st.dataframe(owner_appearances)
+
+    # Use function "owner_movements" to identify where owners exist, where they are new to the market and where they leave the market
+    owner_appearances.iloc[:,2] = owner_appearances.iloc[:,2].apply(lambda row: 'Existing' if row == 1 else 'None')
+    for i in range(len(months_list)):
+        if i > 0:
+            owner_appearances[months_list[i]] = owner_movements(owner_appearances, months_list[i-1], months_list[i])
+
+    owner_appearances = owner_appearances.drop(['index'], axis=1)
+    #st.dataframe(owner_appearances)
+
+    # Create dataframe of owners and their number of settings
+    owner_size = df[['Owner name', 'Total number of settings with this owner']]
+    owner_size = owner_size.drop_duplicates()
+    #st.dataframe(owner_size)
+
+    # Merge owners dataframes
+    owners = pd.merge(owners1, owners2, how='inner', on='Owner name')
+    owners = pd.merge(owners, owner_appearances, how='inner', on='Owner name')
+    owners = pd.merge(owners, owner_size, how='left', on='Owner name')
 
     # Display dataframe, reset index and don't display index column
     df_display = df[['Ofsted date',
@@ -696,6 +696,11 @@ if uploaded_files:
                    var_labels = dict(URN = "Number of settings"))
 
     with tab6:
+        if toggle == 'Geographic area':
+            title_13 = f"Number of owners with settings in {geographic_area}<br>{', '.join(provider_type_select)}"
+
+        else:
+            title_13 = f"SHowing owner: {owner_selected}"
         # settings_range = tab6.slider(
         #     'Enter range of values for settings per owner',
         #     min_value = 1,
@@ -755,6 +760,7 @@ if uploaded_files:
                         'Existing' : '#1f77b4',
                         'New' : '#2ca02c',
                         'Left' : '#d62728'},
+                    title=title_13
                     )
         fig.update_xaxes(visible=False)
         
