@@ -218,8 +218,11 @@ if uploaded_files:
     england = 'England'
     regions = pd.DataFrame(df['Region'].unique())
     regions = regions.sort_values([0])
+    regions = regions.dropna(axis=0)
+    #st.dataframe(regions)
     local_authorities = pd.DataFrame(df['Local authority'].unique())
     local_authorities = local_authorities.sort_values([0])
+    local_authorities = local_authorities[local_authorities[0] != '(select)']
     #st.dataframe(local_authorities)
 
     # Create list of months
