@@ -278,11 +278,23 @@ if uploaded_files:
         #st.dataframe(provider_types)
         with st.sidebar:
             provider_type_select = st.sidebar.multiselect( # something wrong here
-                'Select provider type',
+                'Select provider type(s)',
                 (provider_types),
                 default = (["Children's Home"])
             )
         df = df[df['Provider type'].isin(provider_type_select)]
+
+        # Widgit to select sector(s)
+        sectors = pd.DataFrame(df['Sector'].unique())
+        sectors = sectors.sort_values([0])
+        #st.dataframe(sectors)
+        with st.sidebar:
+            sector_select = st.sidebar.multiselect(
+                'Select sector(s)',
+                (sectors),
+                default = (["Private"])
+            )
+        df = df[df['Sector'].isin(sector_select)]
 
     elif toggle == 'Owner name':
         # Widgit to select provider
