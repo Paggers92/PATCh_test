@@ -280,7 +280,7 @@ if uploaded_files:
             provider_type_select = st.sidebar.multiselect( # something wrong here
                 'Select provider type(s)',
                 (provider_types),
-                default = (["Children's Home"])
+                default = ["Children's Home", "Residential Special School"]
             )
         df = df[df['Provider type'].isin(provider_type_select)]
 
@@ -292,7 +292,7 @@ if uploaded_files:
             sector_select = st.sidebar.multiselect(
                 'Select sector(s)',
                 (sectors),
-                default = (["Private"])
+                default = ["Private", "Local Authority"]
             )
         df = df[df['Sector'].isin(sector_select)]
 
