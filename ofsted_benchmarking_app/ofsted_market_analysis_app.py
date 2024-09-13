@@ -382,8 +382,7 @@ if uploaded_files:
                                             'CYP Safety', 
                                             'Leadership & Management',
                                             'Conditions Supported',
-                                            'Owners',
-                                            'Beds'])
+                                            'Owners'])
 
     with tab1:
         if toggle == 'Geographic area':
